@@ -58,11 +58,14 @@ ASSIGNED {
  
 ? currents
 BREAKPOINT {
+        LOCAL gna, gk, ik, ina, il
+        CONDUCTANCE gnabar USEION na
+        CONDUCTANCE gkbar USEION k
         SOLVE states METHOD cnexp
         gna = gnabar*m*m*m*h
-	ina = gna*(v - ena)
+	    ina = gna*(v - ena)
         gk = gkbar*n*n*n*n
-	ik = gk*(v - ek)      
+	    ik = gk*(v - ek)
         il = gl*(v - el)
 }
  
@@ -75,11 +78,37 @@ INITIAL {
 }
 
 ? states
-DERIVATIVE states {  
-        rates(v)
-        m' =  (minf-m)/mtau
-        h' = (hinf-h)/htau
-        n' = (ninf-n)/ntau
+DERIVATIVE states {
+
+     LOCAL q10, alpha, beta, sum, mtau, minf, htau, hinf, ntau, ninf
+
+     UNITSOFF
+     q10 = 3^((celsius - 6.3)/10)
+
+     :"m" sodium activation system
+     alpha = .1 * vtrap(-(v+40),10)
+     beta =  4 * exp(-(v+65)/18)
+     sum = alpha + beta
+     mtau = 1/(q10*sum)
+     minf = alpha/sum
+
+     :"h" sodium inactivation system
+     alpha = .07 * exp(-(v+65)/20)
+     beta = 1 / (exp(-(v+35)/10) + 1)
+     sum = alpha + beta
+     htau = 1/(q10*sum)
+     hinf = alpha/sum
+
+     :"n" potassium activation system
+     alpha = .01*vtrap(-(v+55),10)
+     beta = .125*exp(-(v+65)/80)
+     sum = alpha + beta
+     ntau = 1/(q10*sum)
+     ninf = alpha/sum
+
+     m' =  (minf-m)/mtau
+     h' = (hinf-h)/htau
+     n' = (ninf-n)/ntau
 }
  
 :LOCAL q10
@@ -91,26 +120,26 @@ PROCEDURE rates(v(mV)) {  :Computes rate and other constants at current v.
         LOCAL  alpha, beta, sum, q10
         :TABLE minf, mtau, hinf, htau, ninf, ntau DEPEND celsius FROM -100 TO 100 WITH 200
 
-UNITSOFF
-        q10 = 3^((celsius - 6.3)/10)
-                :"m" sodium activation system
-        alpha = .1 * vtrap(-(v+40),10)
-        beta =  4 * exp(-(v+65)/18)
-        sum = alpha + beta
-	mtau = 1/(q10*sum)
-        minf = alpha/sum
-                :"h" sodium inactivation system
-        alpha = .07 * exp(-(v+65)/20)
-        beta = 1 / (exp(-(v+35)/10) + 1)
-        sum = alpha + beta
-	htau = 1/(q10*sum)
-        hinf = alpha/sum
-                :"n" potassium activation system
-        alpha = .01*vtrap(-(v+55),10) 
-        beta = .125*exp(-(v+65)/80)
-	sum = alpha + beta
-        ntau = 1/(q10*sum)
-        ninf = alpha/sum
+    UNITSOFF
+     q10 = 3^((celsius - 6.3)/10)
+     :"m" sodium activation system
+     alpha = .1 * vtrap(-(v+40),10)
+     beta =  4 * exp(-(v+65)/18)
+     sum = alpha + beta
+     mtau = 1/(q10*sum)
+     minf = alpha/sum
+     :"h" sodium inactivation system
+     alpha = .07 * exp(-(v+65)/20)
+     beta = 1 / (exp(-(v+35)/10) + 1)
+     sum = alpha + beta
+     htau = 1/(q10*sum)
+     hinf = alpha/sum
+     :"n" potassium activation system
+     alpha = .01*vtrap(-(v+55),10)
+     beta = .125*exp(-(v+65)/80)
+     sum = alpha + beta
+     ntau = 1/(q10*sum)
+     ninf = alpha/sum
 }
  
 FUNCTION vtrap(x,y) {  :Traps for 0 in denominator of rate eqns.
