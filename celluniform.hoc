@@ -58,11 +58,11 @@ proc biophys() {
     cm = 1
   }
   soma {
-    insert hh
-      gnabar_hh = 0.12
-      gkbar_hh = 0.036
-      gl_hh = 0.0003
-      el_hh = -54.3
+    insert bbhh
+      gnabar_bbhh = 0.12
+      gkbar_bbhh = 0.036
+      gl_bbhh = 0.0003
+      el_bbhh = -54.3
   }
   forsec den {
     insert pas
