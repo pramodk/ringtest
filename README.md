@@ -127,7 +127,7 @@ Now we will start building the `ringtest` model. Clone the github repository as:
 ```bash
 cd $SOURCE_DIR
 git clone https://github.com/pramodk/ringtest.git
-cd ringtest && git checkout tutorial
+cd ringtest && git checkout dev
 ```
 
 This repository contains a `mod` sub-directory which has MOD files (for the gap-junction related test). Using the standard NEURON workflow, we can build a `special` executable using `nrnivmodl` as:
@@ -202,9 +202,10 @@ diff -w out0.dat coreneuron_data/spk1.std
 ```
 The spikes should be identical between NEURON and CoreNEURON.
 
-Here is the complete build and run script that we use for testing :
+Here is the complete build and run script that we use for testing (using Intel compiler module and optimization flags):
 
 ```bash
+
 #!/bin/bash
 
 # stop on error
@@ -212,6 +213,10 @@ set -e
 
 # load required modiles on your cluster
 # module load mpich cmake
+module load intel/parallel_studio_xe-2017u3
+
+export CC=mpiicc
+export CXX=mpiicpc
 
 export BASE_DIR=$HOME/coreneuron_tutorial
 export INSTALL_DIR=$BASE_DIR/install
@@ -219,6 +224,8 @@ export SOURCE_DIR=$BASE_DIR/sources
 
 # create directories
 mkdir -p $INSTALL_DIR $SOURCE_DIR
+
+FLAGS="-O2 -g"
 
 # clone repositories
 
@@ -232,14 +239,14 @@ cd $SOURCE_DIR/nrn
 sed -i -e 's/GLOBAL minf/RANGE minf/g' src/nrnoc/hh.mod
 sed -i -e 's/TABLE minf/:TABLE minf/g' src/nrnoc/hh.mod
 ./build.sh
-./configure --prefix=$INSTALL_DIR --without-iv --with-paranrn --with-nrnpython=`which python`
-make -j && make install
+./configure --prefix=$INSTALL_DIR --without-iv --with-paranrn --with-nrnpython=`which python` CFLAGS="$FLAGS" CXXFLAGS="$FLAGS"
+make -j8 && make install
 
 # install mod2c
 cd $SOURCE_DIR/mod2c
 mkdir -p build && cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR
-make -j && make install
+make -j8 && make install
 
 # set path
 export PATH=$INSTALL_DIR/x86_64/bin:$INSTALL_DIR/bin:$PATH
@@ -248,7 +255,7 @@ export MODLUNIT=$INSTALL_DIR/share/nrnunits.lib
 # clone ring test
 cd $SOURCE_DIR
 git clone https://github.com/pramodk/ringtest.git
-cd ringtest && git checkout tutorial
+cd ringtest && git checkout dev
 
 # build special executable with neuron
 cd $SOURCE_DIR/ringtest
@@ -257,21 +264,21 @@ nrnivmodl mod
 # build coreneuron executable
 cd $SOURCE_DIR/ringtest
 mkdir -p coreneuron_x86 && cd coreneuron_x86
-cmake $BASE_DIR/sources/CoreNeuron -DADDITIONAL_MECHPATH=$SOURCE_DIR/ringtest/mod
-make -j
-
+cmake $BASE_DIR/sources/CoreNeuron -DADDITIONAL_MECHPATH=$SOURCE_DIR/ringtest/mod -DCMAKE_C_FLAGS="$FLAGS" -DCMAKE_CXX_FLAGS="$FLAGS"
+make -j8
 
 # run simulation using neuron
 cd $SOURCE_DIR/ringtest
-./x86_64/special -python ringtest.py -tstop 100 -coredat coreneuron_data
+mpirun -n 16 ./x86_64/special -mpi -python ringtest.py -tstop 10 -coredat coreneuron_data -nring 32 -ncell 32 -branch 32 64 -compart 512 512
 
 # run simulation using coreneuron
-
+export OMP_NUM_THREADS=1
 cd $SOURCE_DIR/ringtest
-./coreneuron_x86/bin/coreneuron_exec -e 100 -d coreneuron_data
+mpirun -n 16 ./coreneuron_x86/bin/coreneuron_exec -e 10 -d coreneuron_data -mpi
 
 # compare spike output between neuron and coreneuron
 diff -w out0.dat coreneuron_data/spk1.std
+
 ```
 
 ## Building CoreNEURON with GPU support
