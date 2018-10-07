@@ -84,6 +84,9 @@ def prun(tstop):
     wait = pc.wait_time() - wait
     runtime = h.startsw() - runtime
 
+    if settings.rank == 0:
+        print ("Solver Time : %lf" % runtime)
+
     computation_time = pc.step_time()
 
     cw_time = computation_time + pc.step_wait()
