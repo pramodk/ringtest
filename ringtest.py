@@ -193,7 +193,7 @@ if __name__ == '__main__':
         if args.runcn is True:
           pc.nrncore_run("-e %g" % tstop)
           timeit("embedded coreneuron", settings.rank)
-          quit()
+          h.quit()
         else:
           pc.nrnbbcore_write(bbcorewrite_folder)
           timeit("wrote coreneuron data", settings.rank)
